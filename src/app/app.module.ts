@@ -11,7 +11,8 @@ import { SetLocationPage } from '../pages/set-location/set-location';
 import { PlacePage } from '../pages/place/place';
 import { AgmCoreModule } from '@agm/core';
 import { Geolocation } from '@ionic-native/geolocation';
-
+import { Camera } from '@ionic-native/camera';
+import { PlacesService } from '../services/places.service';
 @NgModule({
   declarations: [
     MyApp,
@@ -37,8 +38,10 @@ import { Geolocation } from '@ionic-native/geolocation';
   ],
   providers: [
     Geolocation,
+    Camera,
     StatusBar,
     SplashScreen,
+    PlacesService,
     {provide: ErrorHandler, useClass: IonicErrorHandler}
   ]
 })

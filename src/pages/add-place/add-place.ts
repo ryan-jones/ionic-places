@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
-import { IonicPage, NavController, NavParams, ModalController } from 'ionic-angular';
+import { IonicPage, ModalController, LoadingController, ToastController, normalizeURL } from 'ionic-angular';
 import { NgForm } from '@angular/forms';
 import { SetLocationPage } from '../set-location/set-location';
 import { MapLocation } from '../../app/models/location.model';
 import { Geolocation } from '@ionic-native/geolocation';
+import { Camera } from '@ionic-native/camera';
+import { PlacesService } from '../../services/places.service';
 
 @IonicPage()
 @Component({
@@ -16,15 +18,27 @@ export class AddPlacePage {
     lng: -73.9759827
   }
   private locationIsSet = false;
-  constructor(private modalCtrl: ModalController, private geolocation: Geolocation) {
-  }
+  private imagePath: string = '';
 
-  ionViewDidLoad() {
-    console.log('ionViewDidLoad AddPlacePage');
+  constructor(
+    private modalCtrl: ModalController,
+    private geolocation: Geolocation,
+    private loadingCtrl: LoadingController,
+    private toastCtrl: ToastController,
+    private camera: Camera,
+    private placesService: PlacesService) {
   }
 
   onSubmit(form: NgForm) {
-    console.log('form', form);
+    const { title, description } = form.value
+    this.placesService.addPlace(title, description, this.location, this.imagePath);
+    form.reset();
+    this.location = {
+      lat: 40.7624324,
+      lng: -73.9759827
+    };
+    this.imagePath = '';
+    this.locationIsSet = false;
   }
 
   onOpenMap() {
@@ -37,13 +51,42 @@ export class AddPlacePage {
   }
 
   onLocate() {
+    const loader = this.loadingCtrl.create({
+      content: 'Getting your location'
+    });
+    loader.present();
     this.geolocation.getCurrentPosition()
       .then(location => {
-        console.log('location', location);
+        loader.dismiss();
         this.location.lat = location.coords.latitude;
         this.location.lng = location.coords.longitude;
         this.locationIsSet = true;
       })
-      .catch(error => console.log('error', error));
+      .catch(error => {
+        loader.dismiss();
+        const toast = this.toastCtrl.create({
+          message: 'Could not get location!',
+          duration: 2000
+        });
+        toast.present();
+      });
+  }
+
+  onTakePhoto() {
+    this.camera.getPicture({
+      encodingType: this.camera.EncodingType.JPEG,
+      correctOrientation: true
+    })
+      .then(picture => {
+        this.imagePath = normalizeURL(picture);
+      })
+      .catch(error => {
+        this.imagePath = '';
+        const toast = this.toastCtrl.create({
+          message: 'Unable to take picture',
+          duration: 2000
+        });
+        toast.present();
+      });
   }
 }
