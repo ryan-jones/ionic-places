@@ -1,13 +1,15 @@
 import { Component } from '@angular/core';
-import { IonicPage, ModalController, LoadingController, ToastController, normalizeURL } from 'ionic-angular';
+import { ModalController, LoadingController, ToastController, normalizeURL } from 'ionic-angular';
 import { NgForm } from '@angular/forms';
 import { SetLocationPage } from '../set-location/set-location';
 import { MapLocation } from '../../app/models/location.model';
 import { Geolocation } from '@ionic-native/geolocation';
 import { Camera } from '@ionic-native/camera';
 import { PlacesService } from '../../services/places.service';
+import { File } from '@ionic-native/file';
 
-@IonicPage()
+declare const cordova: any;
+
 @Component({
   selector: 'page-add-place',
   templateUrl: 'add-place.html',
@@ -26,7 +28,8 @@ export class AddPlacePage {
     private loadingCtrl: LoadingController,
     private toastCtrl: ToastController,
     private camera: Camera,
-    private placesService: PlacesService) {
+    private placesService: PlacesService,
+    private file: File) {
   }
 
   onSubmit(form: NgForm) {
@@ -45,8 +48,10 @@ export class AddPlacePage {
     const modal = this.modalCtrl.create(SetLocationPage, { location: this.location, isSet: this.locationIsSet });
     modal.present();
     modal.onDidDismiss(data => {
-      this.location = data ? data.location : this.location;
-      this.locationIsSet = true;
+      if (data) {
+        this.location =  data.location;
+        this.locationIsSet = true;
+      }
     })
   }
 
@@ -78,6 +83,29 @@ export class AddPlacePage {
       correctOrientation: true
     })
       .then(picture => {
+        const currentName = picture.replace(/^.*[\\\/]/, '');
+        const path = picture.replace(/[^\/]*$/, '');
+        const newFileName = new Date().getUTCMilliseconds() + '.jpg';
+        this.file.moveFile(path, currentName, cordova.file.dataDirectory, newFileName)
+          .then(data => {
+            const toast = this.toastCtrl.create({
+              message: 'file moved!',
+              duration: 3000
+            });
+            toast.present();
+            this.imagePath = data.nativeURL;
+            this.camera.cleanup();
+          })
+          .catch(err => {
+            this.imagePath = '';
+            const toast = this.toastCtrl.create({
+              message: 'Could not save the image!',
+              duration: 2500
+            });
+            toast.present();
+            this.camera.cleanup();
+          })
+          ;
         this.imagePath = normalizeURL(picture);
       })
       .catch(error => {
